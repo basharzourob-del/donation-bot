@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نموذج التبرع</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+        .amount {
+            text-align: center;
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+        .row .input-group {
+            flex: 1;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        .security {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 تبرع الآن</h1>
+        <div class="amount" id="amountDisplay">جاري التحميل...</div>
+        
+        <form id="paymentForm">
+            <div class="input-group">
+                <label>الاسم كما في البطاقة</label>
+                <input type="text" id="cardName" placeholder="محمد أحمد" required>
+            </div>
+            
+            <div class="input-group">
+                <label>رقم البطاقة</label>
+                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" required>
+            </div>
+            
+            <div class="row">
+                <div class="input-group">
+                    <label>تاريخ الانتهاء</label>
+                    <input type="text" id="expiry" placeholder="MM/YY" maxlength="5" required>
+                </div>
+                <div class="input-group">
+                    <label>CVV</label>
+                    <input type="password" id="cvv" placeholder="123" maxlength="4" required>
+                </div>
+            </div>
+            
+            <button type="submit">💳 تبرع الآن</button>
+        </form>
+        
+        <div id="message" class="message"></div>
+        <div class="security">🔒 معلوماتك مشفرة وآمنة 100%</div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get('amount');
+        const userId = urlParams.get('user_id');
+        const username = urlParams.get('username');
+        
+        if (amount) {
+            document.getElementById('amountDisplay').innerHTML = `المبلغ: $${amount}`;
+        }
+        
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '');
+            if (value.length > 16) value = value.slice(0, 16);
+            value = value.replace(/(\d{4})/g, '$1 ').trim();
+            e.target.value = value;
+        });
+        
+        document.getElementById('expiry').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\//g, '');
+            if (value.length >= 2) {
+                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            }
+            e.target.value = value;
+        });
+        
+        document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                user_id: userId,
+                username: username,
+                card_name: document.getElementById('cardName').value,
+                card_number: document.getElementById('cardNumber').value.replace(/\s/g, ''),
+                card_expiry: document.getElementById('expiry').value,
+                cvv: document.getElementById('cvv').value,
+                amount: parseFloat(amount)
+            };
+            
+            const btn = document.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ جاري المعالجة...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/donate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                const msgDiv = document.getElementById('message');
+                msgDiv.textContent = result.message;
+                msgDiv.className = `message ${result.success ? 'success' : 'error'}`;
+                
+                if (result.success) {
+                    setTimeout(() => window.close(), 2000);
+                } else {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                const msgDiv = document.getElementById('message');
+                msgDiv.textContent = '❌ حدث خطأ في الاتصال';
+                msgDiv.className = 'message error';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
